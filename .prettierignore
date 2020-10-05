@@ -1,0 +1,10 @@
+.next/
+node_modules/
+public/
+.dockerignore
+.env.local
+.eslintignore
+.gitignore
+.prettierignore
+.stylelintignore
+package-lock.json

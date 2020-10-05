@@ -1,0 +1,15 @@
+.dockerignore
+.eslintignore
+.eslintrc.json
+.github/
+.gitignore
+.huskyrc.json
+.prettierignore
+.prettierrc.json
+.stylelintignore
+.stylelintrc.json
+.vscode/
+Dockerfile
+LICENSE.md
+lint-staged.config.js
+README.md

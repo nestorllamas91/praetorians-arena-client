@@ -1,0 +1,59 @@
+name: Deployment to Google Cloud.
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    name: deploy
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the GitHub repository from this application.
+        uses: actions/checkout@v2
+
+      - name: Build the Docker image for this application and push it into Google Container Registry.
+        uses: docker/build-push-action@v1
+        with:
+          username: _json_key
+          password: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}
+          dockerfile: ./Dockerfile
+          registry: eu.gcr.io
+          repository: ${{ secrets.GCP_PROJECT_ID }}/praetorians-arena-ui
+          tags: latest
+          build_args: NEXT_PUBLIC_API_DOMAIN=${{ secrets.NEXT_PUBLIC_API_DOMAIN }}, NEXT_PUBLIC_GA_TRACKING_ID=${{ secrets.NEXT_PUBLIC_GA_TRACKING_ID }}
+          push: true
+
+      - name: Setup Google Cloud SDK.
+        uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+        with:
+          version: latest
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_BASE64 }}
+          export_default_credentials: true
+
+      - name: Run the Docker image of this application from Google Container Registry into a Google Cloud Run service.
+        run: |
+          gcloud --quiet run deploy praetorians-arena-ui \
+            --platform managed \
+            --region europe-west1 \
+            --allow-unauthenticated \
+            --image eu.gcr.io/${{ secrets.GCP_PROJECT_ID }}/praetorians-arena-ui \
+            --port 3003
+
+      - name: Map the running Google Cloud Run service to a custom domain.
+        run: |
+          gcloud --quiet beta run domain-mappings create \
+          --service praetorians-arena-ui \
+          --domain praetorians-arena.nestorllamas.com \
+          --platform managed \
+          --region europe-west1 \
+          --force-override
+
+      - name: Delete the Docker image of this application from Google Container Registry.
+        run: |
+          gcloud --quiet container images delete eu.gcr.io/${{ secrets.GCP_PROJECT_ID }}/praetorians-arena-ui:latest \
+          --force-delete-tags
